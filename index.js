@@ -173,18 +173,17 @@ function initializeMap() {
 function populateStationDropdowns() {
     const originInput = document.getElementById('origin');
     const destinationInput = document.getElementById('destination');
-    const stationsListOrigin = document.getElementById('stations-list-origin');
-    const stationsListDestination = document.getElementById('stations-list-destination');
+    const originDropdown = document.getElementById('origin-dropdown');
+    const destinationDropdown = document.getElementById('destination-dropdown');
     
-    // Populate datalists with stations
-    stopsData.forEach(stop => {
-        const optionOrigin = document.createElement('option');
-        const optionDestination = document.createElement('option');
-        optionOrigin.value = stop.stop_name;
-        optionDestination.value = stop.stop_name;
-        stationsListOrigin.appendChild(optionOrigin);
-        stationsListDestination.appendChild(optionDestination);
-    });
+    // Create sorted station names array
+    const stationNames = stopsData
+        .map(stop => stop.stop_name)
+        .sort((a, b) => a.localeCompare(b, 'pt'));
+
+    // Setup dropdowns
+    setupDropdown(originInput, originDropdown, stationNames);
+    setupDropdown(destinationInput, destinationDropdown, stationNames);
 
     // Add markers to map
     stopsData.forEach(stop => {
@@ -197,24 +196,105 @@ function populateStationDropdowns() {
         markers.push(marker);
         marker.addTo(map);
     });
+}
 
-    // Add input event listeners for mobile experience
-    [originInput, destinationInput].forEach(input => {
-        // Clear validation message when input changes
-        input.addEventListener('input', function() {
+// Setup dropdown functionality
+function setupDropdown(input, dropdown, items) {
+    let selectedIndex = -1;
+    let filteredItems = items;
+
+    // Function to update dropdown content
+    function updateDropdown(filterText = '') {
+        dropdown.innerHTML = '';
+        filteredItems = items.filter(item => 
+            item.toLowerCase().includes(filterText.toLowerCase())
+        );
+
+        filteredItems.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = `dropdown-item ${index === selectedIndex ? 'selected' : ''}`;
+            div.textContent = item;
+            div.onclick = () => {
+                input.value = item;
+                hideDropdown();
+                input.dispatchEvent(new Event('change'));
+            };
+            dropdown.appendChild(div);
+        });
+
+        if (filteredItems.length > 0) {
+            showDropdown();
+        } else {
+            hideDropdown();
+        }
+    }
+
+    // Show dropdown
+    function showDropdown() {
+        dropdown.classList.remove('hidden');
+    }
+
+    // Hide dropdown
+    function hideDropdown() {
+        dropdown.classList.add('hidden');
+        selectedIndex = -1;
+    }
+
+    // Input event listeners
+    input.addEventListener('input', (e) => {
+        selectedIndex = -1;
+        updateDropdown(e.target.value);
+    });
+
+    input.addEventListener('focus', () => {
+        updateDropdown(input.value);
+    });
+
+    // Handle keyboard navigation
+    input.addEventListener('keydown', (e) => {
+        if (filteredItems.length === 0) return;
+
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, filteredItems.length - 1);
+                updateDropdown(input.value);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateDropdown(input.value);
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedIndex >= 0) {
+                    input.value = filteredItems[selectedIndex];
+                    hideDropdown();
+                    input.dispatchEvent(new Event('change'));
+                }
+                break;
+            case 'Escape':
+                hideDropdown();
+                break;
+        }
+    });
+
+    // Handle click outside
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+            hideDropdown();
+        }
+    });
+
+    // Validate on change
+    input.addEventListener('change', function() {
+        const value = this.value;
+        const isValid = items.includes(value);
+        if (!isValid) {
+            this.setCustomValidity('Por favor, selecione uma estação válida da lista.');
+        } else {
             this.setCustomValidity('');
-        });
-
-        // Validate on blur
-        input.addEventListener('blur', function() {
-            const value = this.value;
-            const isValid = stopsData.some(stop => stop.stop_name === value);
-            if (!isValid) {
-                this.setCustomValidity('Por favor, selecione uma estação válida da lista.');
-            } else {
-                this.setCustomValidity('');
-            }
-        });
+        }
     });
 }
 

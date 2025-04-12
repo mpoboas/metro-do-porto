@@ -81,6 +81,61 @@
                 min-height: 2.75rem;
             }
         }
+
+        /* Improve mobile input experience */
+        @media (max-width: 640px) {
+            input[type="text"] {
+                font-size: 16px !important;
+                -webkit-appearance: none;
+                border-radius: 0.5rem;
+            }
+            
+            /* Force show datalist dropdown arrow on mobile */
+            input::-webkit-calendar-picker-indicator {
+                display: block !important;
+                opacity: 1;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            }
+        }
+
+        /* Custom dropdown styles */
+        .custom-dropdown {
+            border: 1px solid hsl(var(--bc) / 0.2);
+            scrollbar-width: thin;
+        }
+
+        .custom-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-dropdown::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-dropdown::-webkit-scrollbar-thumb {
+            background-color: hsl(var(--bc) / 0.3);
+            border-radius: 3px;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+        }
+
+        .dropdown-item:hover {
+            background-color: hsl(var(--bc) / 0.1);
+        }
+
+        .dropdown-item.selected {
+            background-color: hsl(var(--p) / 0.2);
+        }
+
+        @media (max-width: 640px) {
+            .dropdown-item {
+                padding: 1rem;
+                font-size: 16px;
+            }
+        }
     </style>
     <script>
         tailwind.config = {
@@ -156,10 +211,22 @@
                                                 </svg>
                                                 <span class="font-medium">Origem</span>
                                             </div>
-                                            <input type="text" id="origin" class="input input-bordered w-full" placeholder="Selecione a estação" list="stations-list-origin" autocomplete="off">
-                                            <datalist id="stations-list-origin">
-                                                <!-- Will be populated by JavaScript -->
-                                            </datalist>
+                                            <div class="relative">
+                                                <input type="text" 
+                                                       id="origin" 
+                                                       class="input input-bordered w-full pr-10" 
+                                                       placeholder="Selecione a estação" 
+                                                       autocomplete="off"
+                                                       enterkeyhint="next">
+                                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                    <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                                    </svg>
+                                                </div>
+                                                <div id="origin-dropdown" class="custom-dropdown hidden absolute z-50 w-full mt-1 bg-base-100 shadow-lg max-h-60 rounded-lg overflow-auto">
+                                                    <!-- Will be populated by JavaScript -->
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- Invert Button -->
@@ -180,10 +247,22 @@
                                                 </svg>
                                                 <span class="font-medium">Destino</span>
                                             </div>
-                                            <input type="text" id="destination" class="input input-bordered w-full" placeholder="Selecione a estação" list="stations-list-destination" autocomplete="off">
-                                            <datalist id="stations-list-destination">
-                                                <!-- Will be populated by JavaScript -->
-                                            </datalist>
+                                            <div class="relative">
+                                                <input type="text" 
+                                                       id="destination" 
+                                                       class="input input-bordered w-full pr-10" 
+                                                       placeholder="Selecione a estação" 
+                                                       autocomplete="off"
+                                                       enterkeyhint="go">
+                                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                    <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                                    </svg>
+                                                </div>
+                                                <div id="destination-dropdown" class="custom-dropdown hidden absolute z-50 w-full mt-1 bg-base-100 shadow-lg max-h-60 rounded-lg overflow-auto">
+                                                    <!-- Will be populated by JavaScript -->
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
