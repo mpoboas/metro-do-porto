@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metro do Porto - Planear Viagem</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            z-index: 1;
+        }
+        .leaflet-popup-content button {
+            margin: 4px 0;
+            padding: 4px 8px;
+            background-color: #570df8;
+            color: white;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .leaflet-popup-content button:hover {
+            background-color: #4406cb;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'metro-blue': '#199FDA',
+                        'metro-red': '#C63920',
+                        'metro-green': '#A3BE31',
+                        'metro-yellow': '#EBBC14',
+                        'metro-purple': '#736EB0',
+                        'metro-orange': '#EE731C',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-base-200">
+    <!-- Main content wrapper -->
+    <div class="flex flex-col min-h-screen">
+        <!-- Navbar -->
+        <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+            <div class="navbar-start">
+                <div class="dropdown">
+                    <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+                        </svg>
+                    </div>
+                    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                        <li><a href="index.html" class="active">Planear Viagem</a></li>
+                        <li><a href="timetable.html">Horários</a></li>
+                    </ul>
+                </div>
+                <a href="index.html" class="btn btn-ghost text-xl">
+                    <img src="favicon.ico" class="h-6 w-6 mr-2" alt="Metro do Porto Logo">
+                    Metro do Porto
+                </a>
+            </div>
+            <div class="navbar-center hidden lg:flex">
+                <ul class="menu menu-horizontal px-1">
+                    <li><a href="index.html" class="font-medium active">Planear Viagem</a></li>
+                    <li><a href="timetable.html" class="font-medium">Horários</a></li>
+                </ul>
+            </div>
+            <div class="navbar-end">
+                <label class="swap swap-rotate">
+                    <input type="checkbox" class="theme-controller" value="dark" />
+                    <svg class="swap-on fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/></svg>
+                    <svg class="swap-off fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"/></svg>
+                </label>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow">
+            <main class="container mx-auto px-4 py-8">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <!-- Journey Planner -->
+                    <div class="lg:col-span-1">
+                        <div class="card bg-base-100 shadow-xl sticky top-20">
+                            <div class="card-body p-4">
+                                <h2 class="card-title text-xl mb-4">Planear Viagem</h2>
+                                <form id="journey-planner" class="space-y-3">
+                                    <div class="form-control">
+                                        <label class="label">
+                                            <span class="label-text">Origem</span>
+                                        </label>
+                                        <select class="select select-bordered w-full" id="origin" required>
+                                            <option value="" disabled selected>Selecione a estação</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex items-center justify-center my-2">
+                                        <button type="button" class="btn btn-circle btn-sm btn-ghost" onclick="invertStations()">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="form-control">
+                                        <label class="label">
+                                            <span class="label-text">Destino</span>
+                                        </label>
+                                        <select class="select select-bordered w-full" id="destination" required>
+                                            <option value="" disabled selected>Selecione a estação</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="form-control">
+                                            <label class="label">
+                                                <span class="label-text">Data</span>
+                                            </label>
+                                            <input type="date" class="input input-bordered" id="date" required>
+                                        </div>
+                                        <div class="form-control">
+                                            <label class="label">
+                                                <span class="label-text">Hora</span>
+                                            </label>
+                                            <input type="time" class="input input-bordered" id="time" required>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-full">Procurar</button>
+                                </form>
+
+                                <!-- Journey Results -->
+                                <div id="journey-results" class="mt-4 hidden">
+                                    <div class="divider">Próximas Viagens</div>
+                                    <div class="space-y-2" id="next-departures">
+                                        <!-- Next departures will be added here -->
+                                    </div>
+
+                                    <div class="divider">Detalhes da Viagem</div>
+                                    <div class="stats stats-vertical shadow w-full">
+                                        <div class="stat">
+                                            <div class="stat-title">Tempo de Viagem</div>
+                                            <div class="stat-value text-primary text-2xl" id="journey-time">--</div>
+                                        </div>
+                                        <div class="stat">
+                                            <div class="stat-title">Distância</div>
+                                            <div class="stat-value text-secondary text-2xl" id="journey-distance">--</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <div class="collapse collapse-arrow bg-base-200">
+                                            <input type="checkbox" /> 
+                                            <div class="collapse-title font-medium">
+                                                Tarifas
+                                            </div>
+                                            <div class="collapse-content">
+                                                <div class="overflow-x-auto">
+                                                    <table class="table table-zebra">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Tipo</th>
+                                                                <th>Preço</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>Ocasional</td>
+                                                                <td id="price-occasional">--</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Assinatura</td>
+                                                                <td id="price-subscription">--</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map and Lines -->
+                    <div class="lg:col-span-3">
+                        <div class="card bg-base-100 shadow-xl mb-4">
+                            <div class="card-body p-0">
+                                <div id="map" class="rounded-xl"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metro Lines -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                            <div class="card bg-[#199FDA] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('A')">
+                                <div class="card-body p-3 text-center">
+                                    <h3 class="font-bold text-sm">Linha A</h3>
+                                    <p class="text-xs">Matosinhos - Dragão</p>
+                                </div>
+                            </div>
+                            <div class="card bg-[#C63920] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('B')">
+                                <div class="card-body p-3 text-center">
+                                    <h3 class="font-bold text-sm">Linha B</h3>
+                                    <p class="text-xs">Póvoa - Dragão</p>
+                                </div>
+                            </div>
+                            <div class="card bg-[#A3BE31] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('C')">
+                                <div class="card-body p-3 text-center">
+                                    <h3 class="font-bold text-sm">Linha C</h3>
+                                    <p class="text-xs">ISMAI - Campanhã</p>
+                                </div>
+                            </div>
+                            <div class="card bg-[#EBBC14] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('D')">
+                                <div class="card-body p-3 text-center">
+                                    <h3 class="font-bold text-sm">Linha D</h3>
+                                    <p class="text-xs">St. Ovídio - S. João</p>
+                                </div>
+                            </div>
+                            <div class="card bg-[#736EB0] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('E')">
+                                <div class="card-body p-3 text-center">
+                                    <h3 class="font-bold text-sm">Linha E</h3>
+                                    <p class="text-xs">Aeroporto - Dragão</p>
+                                </div>
+                            </div>
+                            <div class="card bg-[#EE731C] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('F')">
+                                <div class="card-body p-3 text-center">
+                                    <h3 class="font-bold text-sm">Linha F</h3>
+                                    <p class="text-xs">Sra. Hora - Fânzeres</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer footer-center p-6 bg-base-200 text-base-content">
+            <div class="container mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <nav class="flex gap-6">
+                        <a href="https://github.com/mpoboas/metro-do-porto" class="link link-hover flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            Source Code
+                        </a>
+                        <a href="https://www.metrodoporto.pt" class="link link-hover flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM2.04 4.326c.325 1.329 2.532 2.54 3.717 3.19.48.263.793.434.743.484-.08.08-.162.158-.242.234-.416.396-.787.749-.758 1.266.035.634.618.824 1.214 1.017.577.188 1.168.38 1.286.983.082.417-.075.988-.22 1.52-.215.782-.406 1.48.22 1.48 1.5-.5 3.798-3.186 4-5 .138-1.243-2-2-3.5-2.5-.478-.16-.755.081-.99.284-.172.15-.322.279-.51.216-.445-.148-2.5-2-1.5-2.5.78-.39.952-.171 1.227.182.078.099.163.208.273.318.609.304.662-.132.723-.633.039-.322.081-.671.277-.867.434-.434 1.265-.791 2.028-1.12.712-.306 1.365-.587 1.579-.88A7 7 0 1 1 2.04 4.327Z"/>
+                            </svg>
+                            Metro do Porto
+                        </a>
+                    </nav>
+                    <aside class="flex items-center gap-2">
+                        <p class="font-medium">Feito com</p>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="text-red-500" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
+                        </svg>
+                        <p class="font-medium">pelo maior fã do Metro do Porto</p>
+                    </aside>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="index.js"></script>
+</body>
+</html> 
