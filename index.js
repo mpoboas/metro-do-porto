@@ -6,6 +6,17 @@ let calendarData = null;
 let map = null;
 let markers = [];
 let polylines = [];
+let currentLinePolyline = null;
+
+// Line configurations
+const lineConfigs = {
+    'A': { color: '#199FDA', terminals: ['Dragão', 'Matosinhos'] },
+    'B': { color: '#C63920', terminals: ['Dragão', 'Póvoa'] },
+    'C': { color: '#A3BE31', terminals: ['Campanhã', 'ISMAI'] },
+    'D': { color: '#EBBC14', terminals: ['S. João', 'St. Ovídio'] },
+    'E': { color: '#736EB0', terminals: ['Dragão', 'Aeroporto'] },
+    'F': { color: '#EE731C', terminals: ['Fânzeres', 'Sra. Hora'] }
+};
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,8 +24,100 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGTFSData().then(() => {
         populateStationDropdowns();
         setDefaultDateTime();
+        initializeLineCards();
     });
 });
+
+// Initialize line cards
+function initializeLineCards() {
+    document.querySelectorAll('.card').forEach(card => {
+        const lineText = card.querySelector('h3')?.textContent;
+        if (lineText && lineText.startsWith('Linha ')) {
+            const line = lineText.split(' ')[1];
+            card.addEventListener('click', () => showLine(line));
+        }
+    });
+}
+
+// Show line on map
+function showLine(line) {
+    // Clear existing line if any
+    if (currentLinePolyline) {
+        map.removeLayer(currentLinePolyline);
+    }
+
+    // Get all trips for this line
+    const lineTrips = tripsData.filter(trip => trip.route_id === line);
+    if (lineTrips.length === 0) return;
+
+    // Get the first trip to get the sequence of stops
+    const firstTrip = lineTrips[0];
+    const stopSequence = stopTimesData
+        .filter(st => st.trip_id === firstTrip.trip_id)
+        .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
+
+    // Get coordinates for each stop
+    const coordinates = stopSequence.map(st => {
+        const stop = stopsData.find(s => s.stop_id === st.stop_id);
+        return [parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)];
+    });
+
+    // Create and add the polyline
+    const config = lineConfigs[line];
+    currentLinePolyline = L.polyline(coordinates, {
+        color: config.color,
+        weight: 4,
+        opacity: 0.8
+    }).addTo(map);
+
+    // Fit map to show the entire line
+    map.fitBounds(currentLinePolyline.getBounds(), { padding: [50, 50] });
+}
+
+// Show trip path on map
+function showTripPath(tripId, originId, destinationId) {
+    // Clear existing polylines
+    polylines.forEach(line => map.removeLayer(line));
+    polylines = [];
+
+    // Get all stops for this trip between origin and destination
+    const tripStops = stopTimesData
+        .filter(st => st.trip_id === tripId)
+        .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
+
+    // Find start and end indices
+    const originIndex = tripStops.findIndex(st => st.stop_id === originId);
+    const destinationIndex = tripStops.findIndex(st => st.stop_id === destinationId);
+
+    if (originIndex === -1 || destinationIndex === -1) return;
+
+    // Get the relevant section of stops
+    const relevantStops = tripStops.slice(
+        Math.min(originIndex, destinationIndex),
+        Math.max(originIndex, destinationIndex) + 1
+    );
+
+    // Get coordinates for the path
+    const coordinates = relevantStops.map(st => {
+        const stop = stopsData.find(s => s.stop_id === st.stop_id);
+        return [parseFloat(stop.stop_lat), parseFloat(stop.stop_lon)];
+    });
+
+    // Get the line color from the trip
+    const trip = tripsData.find(t => t.trip_id === tripId);
+    const lineColor = lineConfigs[trip.route_id]?.color || '#570df8';
+
+    // Create and add the polyline
+    const tripPath = L.polyline(coordinates, {
+        color: lineColor,
+        weight: 5,
+        opacity: 0.8
+    }).addTo(map);
+    polylines.push(tripPath);
+
+    // Fit map to show the entire path
+    map.fitBounds(tripPath.getBounds(), { padding: [50, 50] });
+}
 
 // Load GTFS data
 async function loadGTFSData() {
@@ -68,23 +171,23 @@ function initializeMap() {
 
 // Populate station dropdowns
 function populateStationDropdowns() {
-    const originSelect = document.getElementById('origin');
-    const destinationSelect = document.getElementById('destination');
+    const originInput = document.getElementById('origin');
+    const destinationInput = document.getElementById('destination');
+    const stationsListOrigin = document.getElementById('stations-list-origin');
+    const stationsListDestination = document.getElementById('stations-list-destination');
     
-    // Clear existing options
-    originSelect.innerHTML = '<option value="" disabled selected>Selecione a estação</option>';
-    destinationSelect.innerHTML = '<option value="" disabled selected>Selecione a estação</option>';
-    
-    // Add stations
+    // Populate datalists with stations
     stopsData.forEach(stop => {
-        const option = document.createElement('option');
-        option.value = stop.stop_id;
-        option.textContent = stop.stop_name;
-        
-        originSelect.appendChild(option.cloneNode(true));
-        destinationSelect.appendChild(option);
+        const optionOrigin = document.createElement('option');
+        const optionDestination = document.createElement('option');
+        optionOrigin.value = stop.stop_name;
+        optionDestination.value = stop.stop_name;
+        stationsListOrigin.appendChild(optionOrigin);
+        stationsListDestination.appendChild(optionDestination);
+    });
 
-        // Add marker to map
+    // Add markers to map
+    stopsData.forEach(stop => {
         const marker = L.marker([stop.stop_lat, stop.stop_lon])
             .bindPopup(`
                 <strong>${stop.stop_name}</strong><br>
@@ -94,6 +197,25 @@ function populateStationDropdowns() {
         markers.push(marker);
         marker.addTo(map);
     });
+
+    // Add input event listeners for mobile experience
+    [originInput, destinationInput].forEach(input => {
+        // Clear validation message when input changes
+        input.addEventListener('input', function() {
+            this.setCustomValidity('');
+        });
+
+        // Validate on blur
+        input.addEventListener('blur', function() {
+            const value = this.value;
+            const isValid = stopsData.some(stop => stop.stop_name === value);
+            if (!isValid) {
+                this.setCustomValidity('Por favor, selecione uma estação válida da lista.');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
 }
 
 // Set default date and time
@@ -102,13 +224,13 @@ function setDefaultDateTime() {
     const dateInput = document.getElementById('date');
     const timeInput = document.getElementById('time');
     
-    // Set date
+    // Set date (yyyy-mm-dd)
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     dateInput.value = `${yyyy}-${mm}-${dd}`;
     
-    // Set time
+    // Set time (HH:mm)
     const hh = String(now.getHours()).padStart(2, '0');
     const min = String(now.getMinutes()).padStart(2, '0');
     timeInput.value = `${hh}:${min}`;
@@ -116,22 +238,30 @@ function setDefaultDateTime() {
 
 // Set origin from map
 function setOrigin(stopId) {
-    document.getElementById('origin').value = stopId;
+    const originInput = document.getElementById('origin');
+    const station = stopsData.find(stop => stop.stop_id === stopId);
+    if (station) {
+        originInput.value = station.stop_name;
+    }
 }
 
 // Set destination from map
 function setDestination(stopId) {
-    document.getElementById('destination').value = stopId;
+    const destinationInput = document.getElementById('destination');
+    const station = stopsData.find(stop => stop.stop_id === stopId);
+    if (station) {
+        destinationInput.value = station.stop_name;
+    }
 }
 
 // Invert origin and destination
 function invertStations() {
-    const originSelect = document.getElementById('origin');
-    const destinationSelect = document.getElementById('destination');
-    const tempValue = originSelect.value;
+    const originInput = document.getElementById('origin');
+    const destinationInput = document.getElementById('destination');
+    const tempValue = originInput.value;
     
-    originSelect.value = destinationSelect.value;
-    destinationSelect.value = tempValue;
+    originInput.value = destinationInput.value;
+    destinationInput.value = tempValue;
 }
 
 // Get service type based on date
@@ -224,16 +354,26 @@ function formatTime(time) {
 document.getElementById('journey-planner').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const originId = document.getElementById('origin').value;
-    const destinationId = document.getElementById('destination').value;
+    const originInput = document.getElementById('origin');
+    const destinationInput = document.getElementById('destination');
+    
+    // Find station IDs from selected names
+    const originStation = stopsData.find(stop => stop.stop_name === originInput.value);
+    const destinationStation = stopsData.find(stop => stop.stop_name === destinationInput.value);
+    
+    if (!originStation || !destinationStation) {
+        alert('Por favor, selecione estações válidas.');
+        return;
+    }
+    
     const dateStr = document.getElementById('date').value;
     const timeStr = document.getElementById('time').value;
     
     const datetime = new Date(`${dateStr}T${timeStr}`);
-    const departures = findNextDepartures(originId, destinationId, datetime);
+    const departures = findNextDepartures(originStation.stop_id, destinationStation.stop_id, datetime);
     
     // Display results
-    displayResults(departures, originId, destinationId);
+    displayResults(departures, originStation.stop_id, destinationStation.stop_id);
 });
 
 // Display journey results
@@ -255,7 +395,8 @@ function displayResults(departures, originId, destinationId) {
         const arrivalTime = formatTime(dep.arrivalTime);
         
         const div = document.createElement('div');
-        div.className = 'flex justify-between items-center p-2 bg-base-200 rounded-lg';
+        div.className = 'flex justify-between items-center p-2 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300';
+        div.onclick = () => showTripPath(dep.tripId, originId, destinationId);
         div.innerHTML = `
             <div>
                 <div class="font-bold">${departureTime} → ${arrivalTime}</div>
@@ -266,18 +407,12 @@ function displayResults(departures, originId, destinationId) {
         departuresDiv.appendChild(div);
     });
 
-    // Update journey stats
+    // Show the first trip's path by default
     if (departures.length > 0) {
-        const firstDeparture = departures[0];
+        showTripPath(departures[0].tripId, originId, destinationId);
+        
         document.getElementById('journey-time').textContent = 
-            `${calculateDuration(firstDeparture.departureTime, firstDeparture.arrivalTime)} min`;
-        
-        // Calculate and display distance (if you have the data)
-        // document.getElementById('journey-distance').textContent = '...';
-        
-        // Update fare prices (if you have the data)
-        // document.getElementById('price-occasional').textContent = '...';
-        // document.getElementById('price-subscription').textContent = '...';
+            `${calculateDuration(departures[0].departureTime, departures[0].arrivalTime)} min`;
     }
 }
 

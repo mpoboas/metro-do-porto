@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metro do Porto - Planear Viagem</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         #map {
-            height: 600px;
+            height: 500px;
             width: 100%;
             z-index: 1;
+            border-radius: 0.5rem;
         }
         .leaflet-popup-content button {
             margin: 4px 0;
@@ -25,6 +29,57 @@
         }
         .leaflet-popup-content button:hover {
             background-color: #4406cb;
+        }
+        @media (min-width: 1024px) {
+            .journey-planner-sticky {
+                position: sticky;
+                top: 5rem;
+                height: calc(100vh - 8rem);
+                overflow-y: auto;
+            }
+        }
+        @media (max-width: 640px) {
+            .form-control {
+                margin-bottom: 1rem;
+            }
+            .input {
+                font-size: 16px; /* Prevents iOS zoom on focus */
+                padding: 0.75rem;
+            }
+            /* Make date and time inputs more touch-friendly on mobile */
+            input[type="date"], input[type="time"] {
+                min-height: 2.75rem;
+            }
+        }
+        
+        /* Hide the default datalist arrow in webkit browsers */
+        input::-webkit-calendar-picker-indicator {
+            display: none !important;
+        }
+
+        /* Make date and time inputs look consistent with other inputs */
+        input[type="date"], input[type="time"] {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-inline-start: 1rem !important;
+            padding-inline-end: 1rem !important;
+            height: 3rem;
+        }
+
+        /* Ensure the calendar/clock icons are visible and properly positioned */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            display: block !important;
+            opacity: 0.7;
+            padding: 0.2rem;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            input[type="date"], input[type="time"] {
+                font-size: 16px;
+                min-height: 2.75rem;
+            }
         }
     </style>
     <script>
@@ -83,101 +138,87 @@
 
         <!-- Main Content -->
         <div class="flex-grow">
-            <main class="container mx-auto px-4 py-8">
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                    <!-- Journey Planner -->
-                    <div class="lg:col-span-1">
-                        <div class="card bg-base-100 shadow-xl sticky top-20">
-                            <div class="card-body p-4">
-                                <h2 class="card-title text-xl mb-4">Planear Viagem</h2>
-                                <form id="journey-planner" class="space-y-3">
-                                    <div class="form-control">
-                                        <label class="label">
-                                            <span class="label-text">Origem</span>
-                                        </label>
-                                        <select class="select select-bordered w-full" id="origin" required>
-                                            <option value="" disabled selected>Selecione a estação</option>
-                                        </select>
+            <main class="container mx-auto p-4">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Journey Planner and Results Column -->
+                    <div class="journey-planner-sticky">
+                        <div class="card bg-base-100 shadow-xl h-full">
+                            <div class="card-body p-6">
+                                <h2 class="card-title text-xl mb-6">Planear Viagem</h2>
+                                <form id="journey-planner" class="space-y-4">
+                                    <!-- Origin and Destination -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                                        <!-- Origin Station -->
+                                        <div class="form-control relative sm:col-span-2">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                                                </svg>
+                                                <span class="font-medium">Origem</span>
+                                            </div>
+                                            <input type="text" id="origin" class="input input-bordered w-full" placeholder="Selecione a estação" list="stations-list-origin" autocomplete="off">
+                                            <datalist id="stations-list-origin">
+                                                <!-- Will be populated by JavaScript -->
+                                            </datalist>
+                                        </div>
+
+                                        <!-- Invert Button -->
+                                        <div class="flex items-end justify-center sm:col-span-1 -mb-2 sm:mb-0">
+                                            <button type="button" onclick="invertStations()" class="btn btn-ghost btn-circle">
+                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M18 10L21 7M21 7L18 4M21 7H7M6 14L3 17M3 17L6 20M3 17H17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Destination Station -->
+                                        <div class="form-control relative sm:col-span-2">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                                                    <circle cx="8" cy="6" r="2" fill="currentColor"/>
+                                                </svg>
+                                                <span class="font-medium">Destino</span>
+                                            </div>
+                                            <input type="text" id="destination" class="input input-bordered w-full" placeholder="Selecione a estação" list="stations-list-destination" autocomplete="off">
+                                            <datalist id="stations-list-destination">
+                                                <!-- Will be populated by JavaScript -->
+                                            </datalist>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center justify-center my-2">
-                                        <button type="button" class="btn btn-circle btn-sm btn-ghost" onclick="invertStations()">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div class="form-control">
-                                        <label class="label">
-                                            <span class="label-text">Destino</span>
-                                        </label>
-                                        <select class="select select-bordered w-full" id="destination" required>
-                                            <option value="" disabled selected>Selecione a estação</option>
-                                        </select>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
+
+                                    <!-- Date and Time -->
+                                    <div class="grid grid-cols-2 gap-4">
                                         <div class="form-control">
                                             <label class="label">
-                                                <span class="label-text">Data</span>
+                                                <span class="label-text font-medium">Data</span>
                                             </label>
-                                            <input type="date" class="input input-bordered" id="date" required>
+                                            <input type="date" id="date" class="input input-bordered w-full" required>
                                         </div>
                                         <div class="form-control">
                                             <label class="label">
-                                                <span class="label-text">Hora</span>
+                                                <span class="label-text font-medium">Hora</span>
                                             </label>
-                                            <input type="time" class="input input-bordered" id="time" required>
+                                            <input type="time" id="time" class="input input-bordered w-full" required>
                                         </div>
                                     </div>
+
+                                    <!-- Submit Button -->
                                     <button type="submit" class="btn btn-primary w-full">Procurar</button>
                                 </form>
 
                                 <!-- Journey Results -->
-                                <div id="journey-results" class="mt-4 hidden">
+                                <div id="journey-results" class="mt-6 hidden">
                                     <div class="divider">Próximas Viagens</div>
-                                    <div class="space-y-2" id="next-departures">
+                                    <div class="space-y-3" id="next-departures">
                                         <!-- Next departures will be added here -->
                                     </div>
 
                                     <div class="divider">Detalhes da Viagem</div>
-                                    <div class="stats stats-vertical shadow w-full">
+                                    <div class="stats stats-vertical bg-base-200 w-full">
                                         <div class="stat">
-                                            <div class="stat-title">Tempo de Viagem</div>
-                                            <div class="stat-value text-primary text-2xl" id="journey-time">--</div>
-                                        </div>
-                                        <div class="stat">
-                                            <div class="stat-title">Distância</div>
-                                            <div class="stat-value text-secondary text-2xl" id="journey-distance">--</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-4">
-                                        <div class="collapse collapse-arrow bg-base-200">
-                                            <input type="checkbox" /> 
-                                            <div class="collapse-title font-medium">
-                                                Tarifas
-                                            </div>
-                                            <div class="collapse-content">
-                                                <div class="overflow-x-auto">
-                                                    <table class="table table-zebra">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Tipo</th>
-                                                                <th>Preço</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <tr>
-                                                                <td>Ocasional</td>
-                                                                <td id="price-occasional">--</td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td>Assinatura</td>
-                                                                <td id="price-subscription">--</td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
+                                            <div class="stat-title font-medium">Tempo de Viagem</div>
+                                            <div class="stat-value text-primary" id="journey-time">--</div>
                                         </div>
                                     </div>
                                 </div>
@@ -186,49 +227,50 @@
                     </div>
 
                     <!-- Map and Lines -->
-                    <div class="lg:col-span-3">
-                        <div class="card bg-base-100 shadow-xl mb-4">
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Map -->
+                        <div class="card bg-base-100 shadow-xl">
                             <div class="card-body p-0">
-                                <div id="map" class="rounded-xl"></div>
+                                <div id="map"></div>
                             </div>
                         </div>
 
                         <!-- Metro Lines -->
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                            <div class="card bg-[#199FDA] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('A')">
-                                <div class="card-body p-3 text-center">
-                                    <h3 class="font-bold text-sm">Linha A</h3>
-                                    <p class="text-xs">Matosinhos - Dragão</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            <div class="card bg-[#199FDA] text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                <div class="card-body p-4 text-center">
+                                    <h3 class="font-bold">Linha A</h3>
+                                    <p class="text-sm opacity-90">Matosinhos - Dragão</p>
                                 </div>
                             </div>
-                            <div class="card bg-[#C63920] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('B')">
-                                <div class="card-body p-3 text-center">
-                                    <h3 class="font-bold text-sm">Linha B</h3>
-                                    <p class="text-xs">Póvoa - Dragão</p>
+                            <div class="card bg-[#C63920] text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                <div class="card-body p-4 text-center">
+                                    <h3 class="font-bold">Linha B</h3>
+                                    <p class="text-sm opacity-90">Póvoa - Dragão</p>
                                 </div>
                             </div>
-                            <div class="card bg-[#A3BE31] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('C')">
-                                <div class="card-body p-3 text-center">
-                                    <h3 class="font-bold text-sm">Linha C</h3>
-                                    <p class="text-xs">ISMAI - Campanhã</p>
+                            <div class="card bg-[#A3BE31] text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                <div class="card-body p-4 text-center">
+                                    <h3 class="font-bold">Linha C</h3>
+                                    <p class="text-sm opacity-90">ISMAI - Campanhã</p>
                                 </div>
                             </div>
-                            <div class="card bg-[#EBBC14] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('D')">
-                                <div class="card-body p-3 text-center">
-                                    <h3 class="font-bold text-sm">Linha D</h3>
-                                    <p class="text-xs">St. Ovídio - S. João</p>
+                            <div class="card bg-[#EBBC14] text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                <div class="card-body p-4 text-center">
+                                    <h3 class="font-bold">Linha D</h3>
+                                    <p class="text-sm opacity-90">St. Ovídio - S. João</p>
                                 </div>
                             </div>
-                            <div class="card bg-[#736EB0] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('E')">
-                                <div class="card-body p-3 text-center">
-                                    <h3 class="font-bold text-sm">Linha E</h3>
-                                    <p class="text-xs">Aeroporto - Dragão</p>
+                            <div class="card bg-[#736EB0] text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                <div class="card-body p-4 text-center">
+                                    <h3 class="font-bold">Linha E</h3>
+                                    <p class="text-sm opacity-90">Aeroporto - Dragão</p>
                                 </div>
                             </div>
-                            <div class="card bg-[#EE731C] text-white cursor-pointer hover:opacity-90 transition-opacity" onclick="highlightLine('F')">
-                                <div class="card-body p-3 text-center">
-                                    <h3 class="font-bold text-sm">Linha F</h3>
-                                    <p class="text-xs">Sra. Hora - Fânzeres</p>
+                            <div class="card bg-[#EE731C] text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                <div class="card-body p-4 text-center">
+                                    <h3 class="font-bold">Linha F</h3>
+                                    <p class="text-sm opacity-90">Sra. Hora - Fânzeres</p>
                                 </div>
                             </div>
                         </div>
@@ -266,9 +308,6 @@
             </div>
         </footer>
     </div>
-
-    <!-- Scripts -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="index.js"></script>
 </body>
 </html> 
